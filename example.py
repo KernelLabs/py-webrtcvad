@@ -182,11 +182,10 @@ def normalize_file(input_path, seconds, sampling_rate, curr_num):
 	length_diff = frames - len(time_series)
 	if (length_diff == 0):
 		return 1
-	# pad with 0's if file is less than target length
-	# try padding randomly at start and end
+	# don't pad with 0's here, later pad features
 	if (length_diff > 0):
-		time_series = librosa.util.fix_length(time_series, frames)
-		librosa.output.write_wav(input_path, time_series, sampling_rate)
+		# time_series = librosa.util.fix_length(time_series, frames)
+		# librosa.output.write_wav(input_path, time_series, sampling_rate)
 		return 1
 	# file is larger than length, truncate into same size chunks
 	else:

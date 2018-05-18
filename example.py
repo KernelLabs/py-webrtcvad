@@ -145,12 +145,12 @@ def vad_collector(sample_rate, frame_duration_ms,
 # of final files with or without replacement
 def main(args):
 	if len(args) != 2:
-		sys.stderr.write(
-			'Usage: example.py <aggressiveness> <path to wav file>\n')
+		sys.stderr.write('Usage: example.py <aggressiveness> <path to wav file>\n')
 		sys.exit(1)
 	input_path = args[1]
 	aggressiveness = int(args[0])
 	audio, sample_rate = read_wave(input_path)
+	assert sample_rate in (8000, 16000, 32000)
 	directory = os.path.dirname(input_path)
 	base = os.path.basename(input_path)
 	name = os.path.splitext(base)[0]
@@ -159,51 +159,14 @@ def main(args):
 	frames = frame_generator(30, audio, sample_rate)
 	frames = list(frames)
 	segments = vad_collector(sample_rate, 30, 300, vad, frames)
-	counter = 0
-	curr_num = int(name.split('-')[1])
-	prefix = name.split('-')[0]
+	count_segments = 0
 	for segment in segments:
-		if (counter == 0):
-			os.remove(input_path)
-		path = os.path.join(directory, prefix + '-' + str(curr_num) + ext)
+		path = os.path.join(directory, name + '-vad-' + str(count_segments) + ext)
 		write_wave(path, segment, sample_rate)
-		# normalize file to 5 seconds, 16000 Hz
-		num_files = normalize_file(path, 5, 16000, curr_num)
-		counter += num_files
-		curr_num += num_files
-	if (counter == 0):
-		return 1
-	return counter
-
-# return number of files we wrote to
-def normalize_file(input_path, seconds, sampling_rate, curr_num):
-	frames = sampling_rate * seconds
-	time_series, sr = librosa.load(input_path, sr=sampling_rate)
-	length_diff = frames - len(time_series)
-	if (length_diff == 0):
-		return 1
-	# don't pad with 0's here, later pad features
-	if (length_diff > 0):
-		# time_series = librosa.util.fix_length(time_series, frames)
-		# librosa.output.write_wav(input_path, time_series, sampling_rate)
-		return 1
-	# file is larger than length, truncate into same size chunks
-	else:
-		i = 0
-		directory = os.path.dirname(input_path)
-		base = os.path.basename(input_path)
-		ext = os.path.splitext(base)[1]
-		name = os.path.splitext(base)[0]
-		prefix = name.split('-')[0]
-		counter = 0
-		while (i + frames <= len(time_series)):
-			new_path = os.path.join(directory, prefix + '-' + str(curr_num) + ext)
-			output = time_series[i:(i + frames)]
-			librosa.output.write_wav(new_path, output, sr=sampling_rate)
-			counter += 1
-			i += frames
-			curr_num += 1
-		return counter
+		count_segments += 1
+	if count_segments > 0:
+		os.remove(input_path)
+	return count_segments
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
